@@ -45,7 +45,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 I2C_HandleTypeDef hi2c1;
 
@@ -61,6 +60,53 @@ int _write(int file, char *ptr, int len)
 		ITM_SendChar(*ptr++);
 	}
 	return len;
+}
+
+void ADC_Select_CH0(void)
+{
+	ADC_ChannelConfTypeDef sConfig = {0};
+	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+	  */
+	  sConfig.Channel = ADC_CHANNEL_0;
+	  sConfig.Rank = 1;
+	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+}
+
+void ADC_Select_CH1(void)
+{
+	ADC_ChannelConfTypeDef sConfig = {0};
+	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+	  */
+	  sConfig.Channel = ADC_CHANNEL_1;
+	  sConfig.Rank = 1;
+	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+}
+
+void ADC_Select_CH4(void)
+{
+	ADC_ChannelConfTypeDef sConfig = {0};
+	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+	  */
+	  sConfig.Channel = ADC_CHANNEL_4;
+	  sConfig.Rank = 1;
+	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+}
+
+float map1(float x, float in_min, float in_max, float out_min, float out_max, float step) {
+    float mapped_value = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    return round(mapped_value / step) * step; // Adjust value by step size
 }
 
 /* USER CODE END PV */
@@ -81,6 +127,9 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN 0 */
 double setpoint = 0;
 double input, output;
+
+uint16_t ADC_VAL[3];
+
 
 PID_TypeDef t_PID;
 
@@ -124,10 +173,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   while (MPU6050_Init(&hi2c1) == 1);
-//  init_mpu6050();
-//  calibrate_mpu6050(&mpu);
 
-  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.7, 0.18, _PID_P_ON_E, _PID_CD_DIRECT);
+////  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.7, 0.18, _PID_P_ON_E, _PID_CD_DIRECT);
+//  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.5, 0.2, _PID_P_ON_E, _PID_CD_DIRECT);
+  PID(&t_PID, &input, &output, &setpoint, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);
   PID_SetMode(&t_PID, _PID_MODE_AUTOMATIC);
   PID_SetSampleTime(&t_PID, 1);
   PID_SetOutputLimits(&t_PID, -255, 255);
@@ -141,18 +190,47 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  ADC_Select_CH0();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[0] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+
+	  ADC_Select_CH1();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[1] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+
+	  ADC_Select_CH4();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[2] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+
+	  // Map the ADC values to desired ranges and steps
+	  double pot1_value = map1(ADC_VAL[0], 0, 4095, 0, 5, 0.5); // Map ADC_VAL[0] to range 1-10 with step 0.5
+	  double pot2_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);   // Map ADC_VAL[1] to range 0-5 with step 0.1
+	  double pot3_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);   // Map ADC_VAL[2] to range 0-2 with step 0.01
 
   	  MPU6050_Read_All(&hi2c1, &mpu);
 	  CalculateAccAngle(&angle, &mpu);
+
 //		  printf("angles Kalman: %f\t %f\n", mpu.KalmanAngleX, mpu.KalmanAngleY);
 //  	  printf("		angles Accel: %f\t, %f\n", angle.acc_roll, angle.acc_pitch);
+
 	  input = angle.acc_roll;
+	  PID_SetTunings(&t_PID, pot1_value, pot2_value, pot3_value);
 	  PID_Compute(&t_PID);
-	  printf("PID output: %f\n", output);
+//	  printf("PID output: %f\n", output);
 	  double pwm = map(output, -255, 255, 30, 70);
-	  printf("PWM: %f\n", pwm);
+//	  printf("PWM: %f\n", pwm);
 	  TIM2->CCR3 = pwm;
 	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+
+
+	  printf("%f\t %f\t %f\t Angle: %f\t PWM: %f\n", pot1_value, pot2_value, pot3_value, angle.acc_roll, pwm);
+//	  printf("Angle: %f\t PWM: %f\n", angle.acc_roll, pwm);
 
 //	  if(read_acceleration_mpu6050(&mpu))
 //	  {
@@ -169,42 +247,6 @@ int main(void)
 //
 //		  TIM2->CCR3 = output;
 //		  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-
-
-	  /////////////////---------POTENTIOMETERS TESTING-------------
-
-//		  HAL_ADC_Start(&hadc1);
-//		  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-//		  potentiometer_value = HAL_ADC_GetValue(&hadc1); // Read the potentiometer value
-//		  if (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) == HAL_OK)
-//		  {
-//			  P_pot = (HAL_ADC_GetValue(&hadc1) * 100) / 4095;
-//		  }
-//		  else
-//			  printf("ERROR\n");
-//
-//		  printf("%d\t %d\t %d\n", P_pot, I_pot, D_pot);
-
-
-
-//	  TIM2->CCR3 = 60;
-//
-//	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-//
-//	  HAL_ADC_Start(&hadc1);
-//	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-//  	  if (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) == HAL_OK)
-//  	  {
-//		potentiometer_value = HAL_ADC_GetValue(&hadc1); // Read the potentiometer value
-//		pwm_duty_cycle = (potentiometer_value * 100) / 4095; // Convert potentiometer value to PWM duty cycle percentage
-//  //
-////		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, pwm_duty_cycle); // Set PWM duty cycle
-//		TIM2->CCR3 = pwm_duty_cycle / 100 * 500;
-//		HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-//		printf("Duty Cycle: %ld\n", TIM2->CCR3);
-//  	  }
-//	  HAL_Delay(50);
-
 
   }
   /* USER CODE END 3 */
@@ -269,7 +311,7 @@ static void MX_ADC1_Init(void)
 
   /* USER CODE END ADC1_Init 0 */
 
-  ADC_ChannelConfTypeDef sConfig = {0};
+//  ADC_ChannelConfTypeDef sConfig = {0};
 
   /* USER CODE BEGIN ADC1_Init 1 */
 
@@ -286,7 +328,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -294,33 +336,33 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
 
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_1;
-  sConfig.Rank = 2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = 3;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+//  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+//  */
+//  sConfig.Channel = ADC_CHANNEL_0;
+//  sConfig.Rank = 1;
+//  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+//  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//
+//  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+//  */
+//  sConfig.Channel = ADC_CHANNEL_1;
+//  sConfig.Rank = 2;
+//  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//
+//  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+//  */
+//  sConfig.Channel = ADC_CHANNEL_4;
+//  sConfig.Rank = 3;
+//  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
@@ -451,15 +493,11 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
-  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-  /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 
@@ -507,6 +545,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 
 /* USER CODE END 4 */
 

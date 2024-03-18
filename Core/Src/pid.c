@@ -78,7 +78,7 @@ uint8_t PID_Compute(PID_TypeDef *uPID)
 		if (error < -5 || error > 5 || error == 0)
 			uPID->OutputSum = 0;
 		else
-			uPID->OutputSum += (uPID->Ki * error * 200);
+			uPID->OutputSum += (uPID->Ki * error * 250);
 
 		/* ..... Add Proportional on Measurement, if P_ON_M is specified ..... */
 		if (!uPID->POnE)
@@ -107,7 +107,7 @@ uint8_t PID_Compute(PID_TypeDef *uPID)
 		}
 
 		/* ..... Compute Rest of PID Output ..... */
-		output += uPID->OutputSum - uPID->Kd * dInput / 200;
+		output += uPID->OutputSum - uPID->Kd * dInput / 250;
 
 		if (output > uPID->OutMax)
 		{
