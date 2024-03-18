@@ -8,7 +8,6 @@
 
 
 #include <math.h>
-#include "mpu6050.h"
 #include "mpu.h"
 #include <main.h>
 

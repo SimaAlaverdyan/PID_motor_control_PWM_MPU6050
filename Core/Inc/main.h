@@ -32,6 +32,7 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stddef.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -75,7 +76,12 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+int _write(int file, char *ptr, int len);
+int map(int x, int in_min, int in_max, int out_min, int out_max);
+float map1(float x, float in_min, float in_max, float out_min, float out_max, float step);
+void ADC_Select_CH0(void);
+void ADC_Select_CH1(void);
+void ADC_Select_CH4(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

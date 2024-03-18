@@ -24,7 +24,6 @@
 #include "mpu.h"
 #include "calculate_angle.h"
 #include "pid.h"
-#include <math.h>
 
 /* USER CODE END Includes */
 
@@ -54,60 +53,6 @@ DMA_HandleTypeDef hdma_tim2_up_ch3;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-int _write(int file, char *ptr, int len)
-{
-	for (int i = 0; i < len; ++ i) {
-		ITM_SendChar(*ptr++);
-	}
-	return len;
-}
-
-void ADC_Select_CH0(void)
-{
-	ADC_ChannelConfTypeDef sConfig = {0};
-	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-	  */
-	  sConfig.Channel = ADC_CHANNEL_0;
-	  sConfig.Rank = 1;
-	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-	  {
-	    Error_Handler();
-	  }
-}
-
-void ADC_Select_CH1(void)
-{
-	ADC_ChannelConfTypeDef sConfig = {0};
-	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-	  */
-	  sConfig.Channel = ADC_CHANNEL_1;
-	  sConfig.Rank = 1;
-	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-	  {
-	    Error_Handler();
-	  }
-}
-
-void ADC_Select_CH4(void)
-{
-	ADC_ChannelConfTypeDef sConfig = {0};
-	  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-	  */
-	  sConfig.Channel = ADC_CHANNEL_4;
-	  sConfig.Rank = 1;
-	  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-	  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-	  {
-	    Error_Handler();
-	  }
-}
-
-float map1(float x, float in_min, float in_max, float out_min, float out_max, float step) {
-    float mapped_value = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    return round(mapped_value / step) * step; // Adjust value by step size
-}
 
 /* USER CODE END PV */
 
@@ -133,6 +78,26 @@ uint16_t ADC_VAL[3];
 
 PID_TypeDef t_PID;
 
+void	read_potentiometers_values(void)
+{
+	  ADC_Select_CH0();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[0] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+
+	  ADC_Select_CH1();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[1] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+
+	  ADC_Select_CH4();
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  ADC_VAL[2] = HAL_ADC_GetValue(&hadc1);
+	  HAL_ADC_Stop(&hadc1);
+}
 /* USER CODE END 0 */
 
 /**
@@ -153,7 +118,7 @@ int main(void)
   /* USER CODE BEGIN Init */
   MPU6050_t mpu;
   Angle_t	angle;
-
+  double	pot1_value, pot2_value, pot3_value;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -174,9 +139,8 @@ int main(void)
 
   while (MPU6050_Init(&hi2c1) == 1);
 
-////  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.7, 0.18, _PID_P_ON_E, _PID_CD_DIRECT);
-//  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.5, 0.2, _PID_P_ON_E, _PID_CD_DIRECT);
-  PID(&t_PID, &input, &output, &setpoint, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);
+//  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.5, 0.2, _PID_P_ON_E, _PID_CD_DIRECT);	///1.5	0.8		0.07
+  PID(&t_PID, &input, &output, &setpoint, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);			///1.8	1.1		0.12
   PID_SetMode(&t_PID, _PID_MODE_AUTOMATIC);
   PID_SetSampleTime(&t_PID, 1);
   PID_SetOutputLimits(&t_PID, -255, 255);
@@ -190,63 +154,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  ADC_Select_CH0();
-	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
-	  ADC_VAL[0] = HAL_ADC_GetValue(&hadc1);
-	  HAL_ADC_Stop(&hadc1);
-
-	  ADC_Select_CH1();
-	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
-	  ADC_VAL[1] = HAL_ADC_GetValue(&hadc1);
-	  HAL_ADC_Stop(&hadc1);
-
-	  ADC_Select_CH4();
-	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
-	  ADC_VAL[2] = HAL_ADC_GetValue(&hadc1);
-	  HAL_ADC_Stop(&hadc1);
+	  read_potentiometers_values();
 
 	  // Map the ADC values to desired ranges and steps
-	  double pot1_value = map1(ADC_VAL[0], 0, 4095, 0, 5, 0.5); // Map ADC_VAL[0] to range 1-10 with step 0.5
-	  double pot2_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);   // Map ADC_VAL[1] to range 0-5 with step 0.1
-	  double pot3_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);   // Map ADC_VAL[2] to range 0-2 with step 0.01
+	  pot1_value = map1(ADC_VAL[0], 0, 4095, 0, 5, 0.3); // Map ADC_VAL[0] to range 1-5 with step 0.3
+	  pot2_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);   // Map ADC_VAL[1] to range 0-20 with step 0.1
+	  pot3_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);   // Map ADC_VAL[2] to range 0-2 with step 0.01
 
   	  MPU6050_Read_All(&hi2c1, &mpu);
 	  CalculateAccAngle(&angle, &mpu);
 
-//		  printf("angles Kalman: %f\t %f\n", mpu.KalmanAngleX, mpu.KalmanAngleY);
-//  	  printf("		angles Accel: %f\t, %f\n", angle.acc_roll, angle.acc_pitch);
-
 	  input = angle.acc_roll;
 	  PID_SetTunings(&t_PID, pot1_value, pot2_value, pot3_value);
 	  PID_Compute(&t_PID);
-//	  printf("PID output: %f\n", output);
 	  double pwm = map(output, -255, 255, 30, 70);
-//	  printf("PWM: %f\n", pwm);
 	  TIM2->CCR3 = pwm;
 	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
-
-	  printf("%f\t %f\t %f\t Angle: %f\t PWM: %f\n", pot1_value, pot2_value, pot3_value, angle.acc_roll, pwm);
-//	  printf("Angle: %f\t PWM: %f\n", angle.acc_roll, pwm);
-
-//	  if(read_acceleration_mpu6050(&mpu))
-//	  {
-//		  mpu.x_acc -= mpu.accel_x_OC;
-//		  mpu.y_acc -= mpu.accel_y_OC;
-//		  mpu.z_acc -= mpu.accel_z_OC;
-//		  CalculateAccAngle(&angle, &mpu);
-//		  printf("angle: %f\n", angle.acc_roll);
-//
-//		  input = angle.acc_roll;
-//		  PID_Compute(&t_PID);
-//		  output = map(output, -255, 255, 30, 70);
-//		  printf("PID putput: %f\n", output);
-//
-//		  TIM2->CCR3 = output;
-//		  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+	  printf("%f\t %f\t %f\n", pot1_value, pot2_value, pot3_value);
 
   }
   /* USER CODE END 3 */

@@ -2,14 +2,13 @@
  * mpu.h
  *
  *  Created on: Mar 13, 2024
- *      Author: User
+ *      Author: simaalaverdyan
  */
 
 #ifndef INC_MPU_H_
 #define INC_MPU_H_
 
 #include <stdint.h>
-//#include "i2c.h"
 #include <stdio.h>
 #include <main.h>
 
