@@ -75,7 +75,6 @@ double input, output;
 
 uint16_t ADC_VAL[3];
 
-
 PID_TypeDef t_PID;
 
 void	read_potentiometers_values(void)
