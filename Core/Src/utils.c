@@ -10,13 +10,13 @@
 
 extern ADC_HandleTypeDef hadc1;
 
-int _write(int file, char *ptr, int len)
-{
-	for (int i = 0; i < len; ++ i) {
-		ITM_SendChar(*ptr++);
-	}
-	return len;
-}
+//int _write(int file, char *ptr, int len)
+//{
+//	for (int i = 0; i < len; ++ i) {
+//		ITM_SendChar(*ptr++);
+//	}
+//	return len;
+//}
 
 float map1(float x, float in_min, float in_max, float out_min, float out_max, float step)
 {

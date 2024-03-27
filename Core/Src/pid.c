@@ -40,10 +40,10 @@ void PID(PID_TypeDef *uPID, double *Input, double *Output, double *Setpoint, dou
 
 }
 
-void PID2(PID_TypeDef *uPID, double *Input, double *Output, double *Setpoint, double Kp, double Ki, double Kd, PIDCD_TypeDef ControllerDirection)
-{
-	PID(uPID, Input, Output, Setpoint, Kp, Ki, Kd, _PID_P_ON_E, ControllerDirection);
-}
+//void PID2(PID_TypeDef *uPID, double *Input, double *Output, double *Setpoint, double Kp, double Ki, double Kd, PIDCD_TypeDef ControllerDirection)
+//{
+//	PID(uPID, Input, Output, Setpoint, Kp, Ki, Kd, _PID_P_ON_E, ControllerDirection);
+//}
 
 /* ~~~~~~~~~~~~~~~~~ Computing ~~~~~~~~~~~~~~~~~ */
 uint8_t PID_Compute(PID_TypeDef *uPID)
@@ -78,7 +78,7 @@ uint8_t PID_Compute(PID_TypeDef *uPID)
 		if (error < -5 || error > 5 || error == 0)
 			uPID->OutputSum = 0;
 		else
-			uPID->OutputSum += (uPID->Ki * error * 250);
+			uPID->OutputSum += (uPID->Ki * error * 300);
 
 		/* ..... Add Proportional on Measurement, if P_ON_M is specified ..... */
 		if (!uPID->POnE)
@@ -96,7 +96,6 @@ uint8_t PID_Compute(PID_TypeDef *uPID)
 		}
 		else { }
 
-		/* ..... Add Proportional on Error, if P_ON_E is specified ..... */
 		if (uPID->POnE)
 		{
 			output = uPID->Kp * error;
@@ -107,7 +106,7 @@ uint8_t PID_Compute(PID_TypeDef *uPID)
 		}
 
 		/* ..... Compute Rest of PID Output ..... */
-		output += uPID->OutputSum - uPID->Kd * dInput / 250;
+		output += uPID->OutputSum - uPID->Kd * dInput / 300;
 
 		if (output > uPID->OutMax)
 		{
