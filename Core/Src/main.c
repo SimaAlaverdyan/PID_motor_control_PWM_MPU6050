@@ -189,9 +189,9 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  read_potentiometers_values();
 
-	  pot_P_value = map1(ADC_VAL[0], 0, 4095, 0, 30, 1); // Map ADC_VAL[0] to range 1-5 with step 0.3
-	  pot_I_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);   // Map ADC_VAL[1] to range 0-20 with step 0.1
-	  pot_D_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);   // Map ADC_VAL[2] to range 0-2 with step 0.01
+	  pot_P_value = map1(ADC_VAL[0], 0, 4095, 0, 30, 1);
+	  pot_I_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);
+	  pot_D_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);
 //	  pot_P_value = 1;
 //	  pot_I_value = 0;
 //	  pot_D_value = 0;
