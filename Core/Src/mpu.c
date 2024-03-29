@@ -26,7 +26,7 @@ extern I2C_HandleTypeDef hi2c1;
 
 // Setup MPU6050
 #define MPU6050_ADDR 0xD0
-const uint16_t i2c_timeout = 100;
+const uint16_t i2c_timeout = 10;
 const double Accel_Z_corrector = 14418.0;
 
 uint32_t timer;
@@ -163,8 +163,9 @@ void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
 		DataStruct->Gy = DataStruct->Gyro_Y_RAW / 131.0;
 		DataStruct->Gz = DataStruct->Gyro_Z_RAW / 131.0;
     }
-    else
+    else {
     	printf("Error on I2C Memory Read\n");
+    }
     // Kalman angle solve
     double dt = (double)(HAL_GetTick() - timer) / 1000;
     timer = HAL_GetTick();

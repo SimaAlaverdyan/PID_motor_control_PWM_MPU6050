@@ -86,19 +86,19 @@ void	read_potentiometers_values(void)
 {
 	  ADC_Select_CH0();
 	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  HAL_ADC_PollForConversion(&hadc1, 100);
 	  ADC_VAL[0] = HAL_ADC_GetValue(&hadc1);
 	  HAL_ADC_Stop(&hadc1);
 
 	  ADC_Select_CH1();
 	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  HAL_ADC_PollForConversion(&hadc1, 100);
 	  ADC_VAL[1] = HAL_ADC_GetValue(&hadc1);
 	  HAL_ADC_Stop(&hadc1);
 
 	  ADC_Select_CH4();
 	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 1000);
+	  HAL_ADC_PollForConversion(&hadc1, 100);
 	  ADC_VAL[2] = HAL_ADC_GetValue(&hadc1);
 	  HAL_ADC_Stop(&hadc1);
 }
@@ -167,14 +167,15 @@ int main(void)
   MX_ADC1_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+//  HAL_GPIO_Init(GPIOA, GPIO_PIN_9, GPIO_MODE_OUTPUT_PP);
 
   while (MPU6050_Init(&hi2c1) == 1);
 
 //  PID(&t_PID, &input, &output, &setpoint, 2.3, 0.5, 0.2, _PID_P_ON_E, _PID_CD_DIRECT);	///1.5	0.8		0.07
-  PID(&t_PID, &input, &output, &setpoint, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);			///1.8	1.1		0.12
-  PID_SetMode(&t_PID, _PID_MODE_AUTOMATIC);
-  PID_SetSampleTime(&t_PID, 1);
-  PID_SetOutputLimits(&t_PID, -255, 255);
+//  PID(&t_PID, &input, &output, &setpoint, 0, 0, 0, _PID_P_ON_E, _PID_CD_DIRECT);			///1.8	1.1		0.12
+//  PID_SetMode(&t_PID, _PID_MODE_AUTOMATIC);
+//  PID_SetSampleTime(&t_PID, 1);
+//  PID_SetOutputLimits(&t_PID, -255, 255);
 
 //  PID1(setpoint, setpoint, 0, dt, 0, 0, 0);
 
@@ -187,54 +188,50 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  read_potentiometers_values();
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+//	  read_potentiometers_values();
 
-	  pot_P_value = map1(ADC_VAL[0], 0, 4095, 0, 30, 1);
-	  pot_I_value = map1(ADC_VAL[1], 0, 4095, 0, 20, 0.1);
-	  pot_D_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);
-//	  pot_P_value = 1;
-//	  pot_I_value = 0;
-//	  pot_D_value = 0;
-
+//	  pot_P_value = map1(ADC_VAL[0], 0, 4095, 0, 5, 0.1);
+//	  pot_I_value = map1(ADC_VAL[1], 0, 4095, 0, 10, 0.1);
+//	  pot_D_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);
+	  pot_P_value = 0.8;
+	  pot_I_value = 0;
+	  pot_D_value = 0;
   	  MPU6050_Read_All(&hi2c1, &mpu);
 	  CalculateAccAngle(&angle, &mpu);
-//	  pot2_value = 0;
 	  input = mpu.KalmanAngleX;
 //	  input = angle.acc_roll;
-
-	  PID_SetTunings(&t_PID, pot_P_value, pot_I_value, pot_D_value);
-	  PID_Compute(&t_PID);
+//	  printf("angle = %f\n\r", angle.acc_roll);
+//	  printf("angle = %f\n\r", mpu.KalmanAngleX);
+//	  PID_SetTunings(&t_PID, pot_P_value, pot_I_value, pot_D_value);
+//	  PID_Compute(&t_PID);
 
 	  ////------PID version 1------------
-//	  double previous_error;
+	  double previous_error;
 //
-//	  uint32_t current_time = HAL_GetTick();
-//	  dt = (current_time - start_time) / 1000.0;
+	  uint32_t current_time = HAL_GetTick();
+	  dt = (current_time - start_time) / 1000.0;
 
 //	  printf("%f\t", dt);
-//	  double output1 = PID1(input, setpoint, &previous_error, dt, pot_P_value, pot_I_value, pot_D_value);
+	  double output1 = PID1(input, setpoint, &previous_error, dt, pot_P_value, pot_I_value, pot_D_value);
 
 	  //	  printf("angle = %f\t OUTPUT1 = %f\n\r", input, output1);
 //	  printf("Angle = %f\n\r", input);
 //	  MIN_PID_VALUE = PID1(90, setpoint, &previous_error, dt, pot_P_value, pot_I_value, pot_D_value);
 //	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
 //	  printf("output1 = %f\t min = %f\t max = %f\n\r", output1, MIN_PID_VALUE, MAX_PID_VALUE);
+	  start_time = current_time;
 
-//	  start_time = current_time;
-
-	  printf("Angle = %f\t ", mpu.KalmanAngleX);
-//	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
-	  double pwm = map(output, -255, 255, 5, 95);
-//	  double pwm = map(output1, MIN_PID_VALUE, MAX_PID_VALUE, 30, 70);
+//	  printf("Angle = %f\t ", mpu.KalmanAngleX);
+	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
+//	  double pwm = map(output, -255, 255, 30, 70);
+	  double pwm = map(output1, MIN_PID_VALUE, MAX_PID_VALUE, 42, 58);
 	  TIM2->CCR3 = pwm;
 	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
-	  printf("pwm = %f\t P = %f\t I = %f\t D = %f\n\r", pwm, pot_P_value, pot_I_value, pot_D_value);
-
-//	  printf("%f\n\r", mpu.KalmanAngleX);
-
-//	  HAL_Delay(1);
-
+//	  printf("pwm = %f\t P = %f\t I = %f\t D = %f\n\r", pwm, pot_P_value, pot_I_value, pot_D_value);
+//	  HAL_Delay(0.1);
+	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
   }
   /* USER CODE END 3 */
 }
@@ -508,6 +505,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -520,12 +520,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
+  /*Configure GPIO pins : LD2_Pin PA9 */
+  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
