@@ -18,7 +18,7 @@ typedef struct {
     double integral;
 } PIDController;
 
-double PID1(double angle, double setpoint, double *previous_error, double dt,double kp, double ki, double kd);
+double PID1(double angle, double setpoint, double *previous_error, double *prev_input, double *integral, double dt, double kp, double ki, double kd);
 double PID2(PIDController *pid, double setpoint, double angle);
 
 #endif /* INC_MY_PID_H_ */

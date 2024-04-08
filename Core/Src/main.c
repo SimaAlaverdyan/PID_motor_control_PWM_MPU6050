@@ -112,14 +112,26 @@ int _write(int file, char *ptr, int len)
 void	set_PID_range(double *MIN_PID_VALUE, double *MAX_PID_VALUE, double dt, double kp, double ki, double kd)
 {
     double error = 90;
+    double *integral = 0;
+//    double *prev_input;
 
+//    double P = kp * error;
+//    double I = ki * (prev_error + error) * dt;
+//    double D = kd * (error - prev_error) / dt;
+//
+//    prev_error = error;
+//
+//    double output = P + I + D;
     double P = kp * error;
-    double I = ki * (prev_error + error) * dt;
-    double D = kd * (error - prev_error) / dt;
+    //    double I = ki * (*previous_error + error) * dt;
+        *integral += ki * error;
+    //    double I = ki * error * dt;
+    //    double D = kd * (error -  *previous_error) / dt;
+        double D = kd * (error - prev_error);
+        prev_error = error;
+//        *prev_input = angle;
 
-    prev_error = error;
-
-    double output = P + I + D;
+        double output = P + *integral - D;
 
 	*MAX_PID_VALUE = output;
 	*MIN_PID_VALUE = -output;
@@ -149,7 +161,8 @@ int main(void)
   double	dt = 0.0;
   uint32_t	start_time = 0;
 
-
+  double integral = 0.0;
+  double previous_error;
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -179,6 +192,9 @@ int main(void)
 
 //  PID1(setpoint, setpoint, 0, dt, 0, 0, 0);
 
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+
+  double prev_input;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -194,12 +210,13 @@ int main(void)
 //	  pot_P_value = map1(ADC_VAL[0], 0, 4095, 0, 5, 0.1);
 //	  pot_I_value = map1(ADC_VAL[1], 0, 4095, 0, 10, 0.1);
 //	  pot_D_value = map1(ADC_VAL[2], 0, 4095, 0, 2, 0.01);
-	  pot_P_value = 0.8;
-	  pot_I_value = 0;
+	  pot_P_value = 600;
+	  pot_I_value = 0.5;
 	  pot_D_value = 0;
-  	  MPU6050_Read_All(&hi2c1, &mpu);
-	  CalculateAccAngle(&angle, &mpu);
-	  input = mpu.KalmanAngleX;
+	  MPU6050_Read_Accel(&hi2c1, &mpu);
+//	  CalculateAccAngle(&angle, &mpu);
+	  input = (int)mpu.KalmanAngleX;
+//	  printf("%f\t %f\n\r", mpu.KalmanAngleX, mpu.KalmanAngleY);
 //	  input = angle.acc_roll;
 //	  printf("angle = %f\n\r", angle.acc_roll);
 //	  printf("angle = %f\n\r", mpu.KalmanAngleX);
@@ -207,27 +224,29 @@ int main(void)
 //	  PID_Compute(&t_PID);
 
 	  ////------PID version 1------------
-	  double previous_error;
+
 //
-	  uint32_t current_time = HAL_GetTick();
-	  dt = (current_time - start_time) / 1000.0;
+//	  uint32_t current_time = HAL_GetTick();
+//	  dt = (current_time - start_time) / 1000.0;
 
 //	  printf("%f\t", dt);
-	  double output1 = PID1(input, setpoint, &previous_error, dt, pot_P_value, pot_I_value, pot_D_value);
+	  double output1 = PID1(input, setpoint, &previous_error, &prev_input, &integral, dt, pot_P_value, pot_I_value, pot_D_value);
 
 	  //	  printf("angle = %f\t OUTPUT1 = %f\n\r", input, output1);
 //	  printf("Angle = %f\n\r", input);
 //	  MIN_PID_VALUE = PID1(90, setpoint, &previous_error, dt, pot_P_value, pot_I_value, pot_D_value);
-//	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
+	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
 //	  printf("output1 = %f\t min = %f\t max = %f\n\r", output1, MIN_PID_VALUE, MAX_PID_VALUE);
-	  start_time = current_time;
+
+//	  start_time = current_time;
+
 
 //	  printf("Angle = %f\t ", mpu.KalmanAngleX);
-	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
+//	  set_PID_range(&MIN_PID_VALUE, &MAX_PID_VALUE, dt, pot_P_value, pot_I_value, pot_D_value);
 //	  double pwm = map(output, -255, 255, 30, 70);
-	  double pwm = map(output1, MIN_PID_VALUE, MAX_PID_VALUE, 42, 58);
+	  double pwm = map(output1, MIN_PID_VALUE, MAX_PID_VALUE, 10, 90);
 	  TIM2->CCR3 = pwm;
-	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+//	  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
 //	  printf("pwm = %f\t P = %f\t I = %f\t D = %f\n\r", pwm, pot_P_value, pot_I_value, pot_D_value);
 //	  HAL_Delay(0.1);
